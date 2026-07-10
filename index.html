@@ -206,11 +206,11 @@
         <input type="tel" id="f-tel" placeholder="例）090-1234-5678" maxlength="20">
       </div>
       <div class="field">
-        <label>メールアドレス</label>
+        <label>メールアドレス<span class="req">必須</span></label>
         <input type="email" id="f-email" placeholder="例）taro@example.com" maxlength="100">
       </div>
       <div class="field">
-        <label>年齢</label>
+        <label>年齢<span class="req">必須</span></label>
         <input type="number" id="f-age" placeholder="例）27" min="15" max="99" style="max-width:140px">
       </div>
       <div class="field">
@@ -220,25 +220,25 @@
     </div>
 
     <div class="section">
-      <h4>面接の候補日時（第1希望は必須）</h4>
+      <h4>面接の候補日時（3つ入力してください）</h4>
       <div class="field">
         <label>第1希望<span class="req">必須</span></label>
         <div class="dt-row"><input type="date" id="f-d1"><input type="time" id="f-t1" step="900"></div>
       </div>
       <div class="field">
-        <label>第2希望</label>
+        <label>第2希望<span class="req">必須</span></label>
         <div class="dt-row"><input type="date" id="f-d2"><input type="time" id="f-t2" step="900"></div>
       </div>
       <div class="field">
-        <label>第3希望</label>
+        <label>第3希望<span class="req">必須</span></label>
         <div class="dt-row"><input type="date" id="f-d3"><input type="time" id="f-t3" step="900"></div>
       </div>
     </div>
 
     <div class="section">
-      <h4>書類（任意・あとから送付でもOK）</h4>
+      <h4>書類（職務経歴書のみ後から送付でもOK）</h4>
       <div class="field">
-        <label>履歴書（PDF/画像/Word・10MBまで）</label>
+        <label>履歴書（PDF/画像/Word・10MBまで）<span class="req">必須</span></label>
         <label class="filebox" id="box-resume">タップしてファイルを選択
           <input type="file" id="f-resume" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
         </label>
@@ -409,14 +409,15 @@ function validate() {
   const errs = [];
   if (!$("f-name").value.trim()) errs.push("氏名を入力してください");
   if (!$("f-tel").value.trim()) errs.push("電話番号を入力してください");
-  if (!document.querySelector('#f-emp input:checked')) errs.push("雇用形態を選択してください");
-  if (!$("f-d1").value || !$("f-t1").value) errs.push("面接の第1希望日時を入力してください");
   const email = $("f-email").value.trim();
-  if (email && !/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) errs.push("メールアドレスの形式が正しくありません");
-  for (const [d, t, lbl] of [["f-d2","f-t2","第2希望"],["f-d3","f-t3","第3希望"]]) {
-    const dv = $(d).value, tv = $(t).value;
-    if ((dv && !tv) || (!dv && tv)) errs.push(`${lbl}は日付と時刻の両方を入力してください`);
+  if (!email) errs.push("メールアドレスを入力してください");
+  else if (!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) errs.push("メールアドレスの形式が正しくありません");
+  if (!$("f-age").value.trim()) errs.push("年齢を入力してください");
+  if (!document.querySelector('#f-emp input:checked')) errs.push("雇用形態を選択してください");
+  for (const [d, t, lbl] of [["f-d1","f-t1","第1希望"],["f-d2","f-t2","第2希望"],["f-d3","f-t3","第3希望"]]) {
+    if (!$(d).value || !$(t).value) errs.push(`面接候補日時の${lbl}（日付と時刻）を入力してください`);
   }
+  if (!$("f-resume").files[0]) errs.push("履歴書を添付してください");
   return errs;
 }
 
