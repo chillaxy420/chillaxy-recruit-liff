@@ -35,8 +35,24 @@
     background: none; border: none; color: var(--sub);
     font-size: 22px; line-height: 1; padding: 2px 8px 4px 0; cursor: pointer;
   }
-  header.app .brand { font-size: 17px; font-weight: 700; letter-spacing: 0.14em; }
-  header.app .sub { font-size: 11px; opacity: .75; letter-spacing: 0.05em; }
+  header.app .brandimg { height: 30px; display: block; }
+  header.app .sub { font-size: 11px; opacity: .75; letter-spacing: 0.05em; margin-top: 3px; }
+
+  .conditions {
+    background: #fff; border-radius: 20px; margin-top: 14px;
+    box-shadow: 1px 1px 3px 0 rgba(0,0,0,.12); padding: 14px 16px;
+    border-top: 3px solid var(--sub);
+  }
+  .conditions h4 {
+    color: var(--main); font-size: 13.5px; letter-spacing: .06em; margin-bottom: 8px;
+  }
+  .conditions ul { list-style: none; }
+  .conditions li {
+    font-size: 12.5px; padding: 3px 0 3px 20px; position: relative;
+  }
+  .conditions li::before {
+    content: "✓"; position: absolute; left: 2px; color: var(--cta); font-weight: 700;
+  }
 
   .wrap { padding: 16px; max-width: 640px; margin: 0 auto; }
 
@@ -160,7 +176,7 @@
 <div class="screen active" id="scr-list">
   <header class="app">
     <div>
-      <div class="brand">CHILLAXY</div>
+      <img class="brandimg" src="./logo.webp" alt="CHILLAXY">
       <div class="sub">RECRUIT — 採用応募</div>
     </div>
   </header>
@@ -168,6 +184,7 @@
     <p id="intro"></p>
   </div>
   <div class="wrap">
+    <div class="conditions" id="conditions"></div>
     <details class="company" id="company"></details>
     <div id="job-list"></div>
   </div>
@@ -178,7 +195,7 @@
   <header class="app">
     <button class="back" onclick="show('scr-list')">‹</button>
     <div>
-      <div class="brand">CHILLAXY</div>
+      <img class="brandimg" src="./logo.webp" alt="CHILLAXY">
       <div class="sub">募集要項</div>
     </div>
   </header>
@@ -190,7 +207,7 @@
   <header class="app">
     <button class="back" onclick="show('scr-detail')">‹</button>
     <div>
-      <div class="brand">CHILLAXY</div>
+      <img class="brandimg" src="./logo.webp" alt="CHILLAXY">
       <div class="sub">応募フォーム</div>
     </div>
   </header>
@@ -299,6 +316,9 @@ function esc(s) {
 function renderList() {
   $("intro").textContent = DATA.common.intro;
   const c = DATA.common;
+  $("conditions").innerHTML =
+    `<h4>全職種共通の待遇・働き方</h4>
+     <ul>${(c.conditions || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
   $("company").innerHTML =
     `<summary>会社について（${esc(c.companyName)}）</summary>
      <div class="body"><dl>
