@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>CHILLAXY 従業員メニュー</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="./config.js"></script>
+<style>
+  :root {
+    --main: #091f42; --sub: #f9cfd1; --cta: #cc2055; --text: #242424;
+    --border: #dddddd; --bg: #FAFAFA; --ok: #1a8f4c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    color: var(--text); background: var(--bg); font-size: 15px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .screen { display: none; min-height: 100vh; padding-bottom: 40px; }
+  .screen.active { display: block; }
+  header.app {
+    background: var(--main); color: #fff; padding: 16px 20px 14px;
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px;
+  }
+  header.app .back { background: none; border: none; color: var(--sub); font-size: 22px; line-height: 1; padding: 2px 8px 4px 0; cursor: pointer; }
+  header.app .brandimg { height: 26px; display: block; }
+  header.app .sub { font-size: 11px; opacity: .75; letter-spacing: .05em; margin-top: 3px; }
+  .wrap { padding: 16px; max-width: 640px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 20px; margin-top: 14px; box-shadow: 1px 1px 3px 0 rgba(0,0,0,.12); padding: 16px; }
+  .card h3 { color: var(--main); font-size: 15px; margin-bottom: 8px; }
+  .muted { color: #777; font-size: 13px; }
+  .menu-btn {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: #fff; border: none; border-radius: 20px; box-shadow: 1px 1px 3px 0 rgba(0,0,0,.12);
+    padding: 16px; margin-top: 12px; cursor: pointer; font-size: 15.5px; color: var(--main); font-weight: 600;
+  }
+  .menu-btn:active { box-shadow: 0 4px 4px rgba(0,0,0,.15); }
+  .menu-btn .ico { font-size: 22px; width: 30px; text-align: center; }
+  .menu-btn .arw { margin-left: auto; color: var(--cta); }
+  .menu-btn small { display: block; font-weight: 400; color: #888; font-size: 12px; margin-top: 2px; }
+  .pill { display: block; width: 100%; border: none; cursor: pointer; background: var(--sub); color: var(--cta);
+    font-size: 16px; font-weight: 700; letter-spacing: .05em; padding: 14px 20px; border-radius: 30px; margin-top: 16px; }
+  .pill:active { background: var(--main); color: #fff; }
+  .pill.primary { background: var(--cta); color: #fff; }
+  .pill:disabled { opacity: .45; }
+  select, input[type=time] {
+    width: 100%; border: 1px solid var(--border); border-radius: 14px; padding: 9px 12px;
+    font-size: 15px; background: #fff; color: var(--text); -webkit-appearance: none; appearance: none;
+  }
+  .today-shift { background: var(--main); color: #fff; border-radius: 20px; padding: 18px; margin-top: 14px; }
+  .today-shift .big { font-size: 20px; font-weight: 700; margin: 4px 0; }
+  .att-row { display: flex; gap: 10px; margin-top: 14px; }
+  .att-row button { flex: 1; border: none; border-radius: 16px; padding: 13px 0; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .att-ok { background: var(--ok); color: #fff; }
+  .att-late { background: #fff; color: var(--main); border: 1px solid var(--border) !important; }
+  .att-done { background: rgba(255,255,255,.15); border-radius: 14px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
+  .late-box { margin-top: 12px; display: none; }
+  .late-box.show { display: block; }
+  .shift-list { list-style: none; margin-top: 8px; }
+  .shift-list li { display: flex; padding: 9px 4px; border-bottom: 1px solid #eee; font-size: 14px; align-items: center; }
+  .shift-list li .d { width: 62px; font-weight: 600; }
+  .shift-list li.sun .d { color: var(--cta); } .shift-list li.sat .d { color: #2f6fb0; }
+  .shift-list li .body { flex: 1; }
+  .shift-list li .k { font-size: 12px; color: #888; }
+  .wish-day { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid #eee; }
+  .wish-day .d { width: 64px; font-size: 13.5px; font-weight: 600; }
+  .wish-day.sun .d { color: var(--cta); } .wish-day.sat .d { color: #2f6fb0; }
+  .wish-day select.wtype { flex: 0 0 96px; }
+  .wish-day .times { display: flex; gap: 4px; flex: 1; }
+  .wish-day .times.hidden { visibility: hidden; }
+  .ym-row { display: flex; gap: 8px; margin-top: 4px; }
+  .ym-row select { flex: 1; }
+  .err { color: var(--cta); font-size: 13px; margin-top: 10px; white-space: pre-line; }
+  .loading { position: fixed; inset: 0; background: rgba(9,31,66,.5); z-index: 99; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .loading.show { display: flex; }
+  .spinner { width: 42px; height: 42px; border-radius: 50%; border: 4px solid var(--sub); border-top-color: transparent; animation: spin .8s linear infinite; }
+  .loading p { color:#fff; font-size:13px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--main); color: #fff; padding: 12px 22px; border-radius: 30px; font-size: 14px; z-index: 100; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- 画面0: 初回紐付け -->
+<div class="screen" id="scr-bind">
+  <header class="app"><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub">STAFF — 従業員メニュー</div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <h3>はじめての方へ</h3>
+      <p class="muted">ご本人を確認するため、お名前を選んでください。次回からは自動で開きます。</p>
+      <div style="margin-top:14px"><select id="bind-name"></select></div>
+      <div class="err" id="bind-err"></div>
+      <button class="pill primary" id="bind-btn" onclick="doBind()">この名前で始める</button>
+    </div>
+  </div>
+</div>
+
+<!-- 画面1: ホーム -->
+<div class="screen" id="scr-home">
+  <header class="app"><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub" id="home-sub">STAFF</div></div></header>
+  <div class="wrap">
+    <div id="today-area"></div>
+    <button class="menu-btn" onclick="openShift()"><span class="ico">📅</span><span>シフトを確認する<small>確定シフト・勤怠を見る</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openWish()"><span class="ico">✍️</span><span>希望シフトを提出する<small>出勤希望・休み希望を登録</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openKintone('daily')"><span class="ico">📝</span><span>日報を書く<small>日々の報告</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openKintone('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>週次の報告</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openKintone('monthly')"><span class="ico">📊</span><span>月次レポート<small>月次の報告</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openKintone('cash')"><span class="ico">💴</span><span>現金出納帳<small>店舗の現金管理</small></span><span class="arw">›</span></button>
+  </div>
+</div>
+
+<!-- 画面2: シフト確認 -->
+<div class="screen" id="scr-shift">
+  <header class="app"><button class="back" onclick="show('scr-home')">‹</button><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub">シフト確認</div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <div class="ym-row"><select id="shift-year"></select><select id="shift-month"></select></div>
+    </div>
+    <div class="card"><div id="shift-body"><p class="muted">読み込み中…</p></div></div>
+  </div>
+</div>
+
+<!-- 画面3: 希望シフト提出 -->
+<div class="screen" id="scr-wish">
+  <header class="app"><button class="back" onclick="show('scr-home')">‹</button><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub">希望シフト提出</div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <div class="ym-row"><select id="wish-year"></select><select id="wish-month"></select></div>
+      <p class="muted" style="margin-top:8px">各日の希望を選んでください。出勤は時刻も入力。空欄の日は提出されません。</p>
+    </div>
+    <div class="card"><div id="wish-body"><p class="muted">読み込み中…</p></div></div>
+    <div class="err" id="wish-err"></div>
+    <button class="pill primary" id="wish-submit" onclick="submitWish()">この内容で希望を提出する</button>
+  </div>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div><p id="loading-msg">読み込み中…</p></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+let liffReady = false, ME = null;
+const $ = (id) => document.getElementById(id);
+const TIMES = (() => { const a = []; for (let h = 6; h <= 26; h++) { const hh = (h % 24); a.push(("0"+hh).slice(-2)+":00"); a.push(("0"+hh).slice(-2)+":30"); } return a; })();
+const DOW = ["日","月","火","水","木","金","土"];
+
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); $(id).classList.add("active"); window.scrollTo(0,0); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function loading(on,msg){ if(msg)$("loading-msg").textContent=msg; $("loading").classList.toggle("show",on); }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+async function api(action, extra){
+  const body = Object.assign({ action }, extra||{});
+  if (liffReady) body.idToken = liff.getIDToken();
+  const dk = new URLSearchParams(location.search);
+  if (dk.get("debugUid")) { body.debugUid = dk.get("debugUid"); body.uidOverride = dk.get("uidOverride")||""; }
+  const res = await fetch(window.CONFIG.GAS_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(body) });
+  return res.json();
+}
+
+function openKintone(key){
+  const url = window.CONFIG.KINTONE[key];
+  if (liffReady && liff.openWindow) liff.openWindow({ url, external: true });
+  else window.open(url, "_blank");
+}
+
+// ---- 起動 ----
+async function boot(){
+  try {
+    await liff.init({ liffId: window.CONFIG.LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    liffReady = true;
+  } catch(e){ console.warn("liff.init failed", e); }
+  const who = await api("whoami");
+  if (!who.ok){ show("scr-bind"); $("bind-err").textContent = who.error||"エラー"; return; }
+  if (who.staff){ ME = who.staff; enterHome(); }
+  else { renderBind(who.candidates||[]); show("scr-bind"); }
+}
+
+function renderBind(cands){
+  $("bind-name").innerHTML = '<option value="">お名前を選択</option>' + cands.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+}
+async function doBind(){
+  const staffId = $("bind-name").value;
+  if(!staffId){ $("bind-err").textContent="お名前を選んでください"; return; }
+  loading(true,"連携中…");
+  try {
+    const r = await api("bind", { staffId });
+    if(!r.ok){ $("bind-err").textContent = r.error||"連携に失敗しました"; return; }
+    ME = r.staff; enterHome();
+  } catch(e){ $("bind-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+function initYM(prefixY, prefixM, baseMonthOffset){
+  const now = new Date();
+  const y = $(prefixY), m = $(prefixM);
+  const cy = now.getFullYear();
+  y.innerHTML = [cy, cy+1].map(v=>`<option value="${v}">${v}年</option>`).join("");
+  m.innerHTML = []; for(let i=1;i<=12;i++) m.innerHTML += `<option value="${i}">${i}月</option>`;
+  let target = new Date(now.getFullYear(), now.getMonth()+ (baseMonthOffset||0), 1);
+  y.value = target.getFullYear(); m.value = target.getMonth()+1;
+}
+
+async function enterHome(){
+  $("home-sub").textContent = "STAFF — " + (ME.name||"");
+  show("scr-home");
+  const t = await api("today");
+  const area = $("today-area");
+  if (!t.ok || !t.shift){
+    area.innerHTML = `<div class="card"><h3>今日のシフト</h3><p class="muted">本日の出勤予定はありません。</p></div>`;
+    return;
+  }
+  const done = t.attendance && t.attendance.response;
+  area.innerHTML = `<div class="today-shift">
+    <div style="font-size:13px;opacity:.8">本日の出勤予定</div>
+    <div class="big">${esc(t.shift.store)}　${esc(t.shift.start)}〜${esc(t.shift.end)}</div>
+    <div id="att-zone"></div></div>`;
+  const zone = $("att-zone");
+  if (done){
+    zone.innerHTML = `<div class="att-done">${done==="遅刻"?"🕐 遅刻で報告済み":"🟢 時間通りで報告済み"}</div>`;
+  } else {
+    zone.innerHTML = `<div class="att-row">
+        <button class="att-ok" onclick="attend('時間通り',0)">🟢 時間通り</button>
+        <button class="att-late" onclick="toggleLate()">🕐 遅刻</button>
+      </div>
+      <div class="late-box" id="late-box">
+        <select id="late-min">${[5,10,15,20,30,45,60].map(n=>`<option value="${n}">${n}分ほど遅刻</option>`).join("")}</select>
+        <button class="pill primary" style="margin-top:10px" onclick="attend('遅刻', parseInt($('late-min').value,10))">遅刻を報告する</button>
+      </div>`;
+  }
+}
+function toggleLate(){ $("late-box").classList.toggle("show"); }
+async function attend(response, late){
+  loading(true,"送信中…");
+  try {
+    const r = await api("attend", { response, lateMinutes: late });
+    if(!r.ok){ toast(r.error||"送信に失敗しました"); return; }
+    $("att-zone").innerHTML = `<div class="att-done">${response==="遅刻"?("🕐 遅刻("+late+"分)で報告しました"):"🟢 時間通りで報告しました"}</div>`;
+    toast("出勤確認を送信しました");
+  } catch(e){ toast("通信エラー"); } finally { loading(false); }
+}
+
+// ---- シフト確認 ----
+async function openShift(){
+  show("scr-shift"); initYM("shift-year","shift-month",0);
+  $("shift-year").onchange = loadShift; $("shift-month").onchange = loadShift;
+  loadShift();
+}
+async function loadShift(){
+  $("shift-body").innerHTML = '<p class="muted">読み込み中…</p>';
+  const r = await api("personal", { year: $("shift-year").value, month: $("shift-month").value });
+  if(!r.ok){ $("shift-body").innerHTML = `<p class="err">${esc(r.error||"取得に失敗しました")}</p>`; return; }
+  const rows = r.days.filter(d=>d.shifts.length || d.off);
+  if(!rows.length){ $("shift-body").innerHTML = `<p class="muted">${r.month}月の確定シフトはまだありません。</p>`; return; }
+  let html = `<h3>${r.year}年${r.month}月（出勤 ${r.workDays}日）</h3><ul class="shift-list">`;
+  rows.forEach(d=>{
+    const cls = d.dow===0?"sun":d.dow===6?"sat":"";
+    const day = parseInt(d.date.split("-")[2],10);
+    const body = d.shifts.length ? d.shifts.map(s=>`${esc(s.store)} ${esc(s.start)}〜${esc(s.end)}`).join("<br>") : '<span class="muted">公休</span>';
+    html += `<li class="${cls}"><span class="d">${day}(${DOW[d.dow]})</span><span class="body">${body}${d.kintai?`<span class="k"> ${esc(d.kintai)}</span>`:""}</span></li>`;
+  });
+  html += "</ul>";
+  $("shift-body").innerHTML = html;
+}
+
+// ---- 希望シフト提出 ----
+let WISH_DAYS = [];
+async function openWish(){
+  show("scr-wish"); initYM("wish-year","wish-month",1);
+  $("wish-year").onchange = loadWish; $("wish-month").onchange = loadWish;
+  loadWish();
+}
+async function loadWish(){
+  $("wish-body").innerHTML = '<p class="muted">読み込み中…</p>'; $("wish-err").textContent="";
+  const y = parseInt($("wish-year").value,10), m = parseInt($("wish-month").value,10);
+  const r = await api("wishlist", { year: y, month: m });
+  if(!r.ok){ $("wish-body").innerHTML = `<p class="err">${esc(r.error||"取得に失敗しました")}</p>`; return; }
+  const existing = {}; (r.wishes||[]).forEach(w=>existing[w.date]=w);
+  const lastDay = new Date(y, m, 0).getDate();
+  const timeOpts = TIMES.map(t=>`<option value="${t}">${t}</option>`).join("");
+  let html = ""; WISH_DAYS = [];
+  for(let day=1; day<=lastDay; day++){
+    const date = `${y}-${("0"+m).slice(-2)}-${("0"+day).slice(-2)}`;
+    const dow = new Date(y,m-1,day).getDay();
+    const ex = existing[date];
+    const wt = ex ? ex.wishType : "";
+    const cls = dow===0?"sun":dow===6?"sat":"";
+    html += `<div class="wish-day ${cls}" data-date="${date}">
+      <span class="d">${day}(${DOW[dow]})</span>
+      <select class="wtype" onchange="onWtype(this)">
+        <option value="" ${wt===""?"selected":""}>—</option>
+        <option value="出勤" ${wt==="出勤"?"selected":""}>出勤</option>
+        <option value="休み希望" ${wt==="休み希望"?"selected":""}>休み希望</option>
+      </select>
+      <span class="times ${wt==="出勤"?"":"hidden"}">
+        <select class="wstart">${timeOpts}</select><select class="wend">${timeOpts}</select>
+      </span></div>`;
+    WISH_DAYS.push(date);
+  }
+  $("wish-body").innerHTML = html;
+  // 既存時刻を反映
+  (r.wishes||[]).forEach(w=>{
+    if(w.wishType!=="出勤") return;
+    const el = document.querySelector(`.wish-day[data-date="${w.date}"]`);
+    if(!el) return;
+    if(w.start) el.querySelector(".wstart").value = w.start;
+    if(w.end) el.querySelector(".wend").value = w.end;
+  });
+}
+function onWtype(sel){
+  const times = sel.parentElement.querySelector(".times");
+  times.classList.toggle("hidden", sel.value!=="出勤");
+}
+async function submitWish(){
+  const entries = [];
+  document.querySelectorAll(".wish-day").forEach(el=>{
+    const wt = el.querySelector(".wtype").value;
+    if(!wt) return;
+    const e = { date: el.dataset.date, wishType: wt };
+    if(wt==="出勤"){ e.start = el.querySelector(".wstart").value; e.end = el.querySelector(".wend").value; }
+    entries.push(e);
+  });
+  if(!entries.length){ $("wish-err").textContent="希望を1日以上選んでください"; return; }
+  loading(true,"提出中…");
+  try {
+    const r = await api("wish", { entries });
+    if(!r.ok){ $("wish-err").textContent = r.error||"提出に失敗しました"; return; }
+    toast(`${r.count}日分の希望を提出しました`);
+    setTimeout(()=>show("scr-home"), 1200);
+  } catch(e){ $("wish-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
