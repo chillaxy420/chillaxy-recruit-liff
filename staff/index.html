@@ -271,17 +271,19 @@ function fillOptions(sel, arr, ph){
 
 // ---- 起動 ----
 async function boot(){
+  loading(true, "起動中…");
   try {
     await liff.init({ liffId: window.CONFIG.LIFF_ID });
-    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; } // リダイレクト（ローディングのまま遷移）
     liffReady = true;
   } catch(e){ console.warn("liff.init failed", e); }
   // キャッシュがあれば即ホーム描画（体感即時）。裏で home 1往復で再検証。
   const cache = loadHomeCache();
-  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); }
+  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); }
   let h;
   try { h = await api("home"); }
-  catch(e){ if(!cache){ show("scr-bind"); $("bind-err").textContent = "通信エラー: "+(e.message||e); } return; }
+  catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-err").textContent = "通信エラー: "+(e.message||e); } return; }
+  loading(false);
   if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-err").textContent = (h&&h.error)||"エラー"; } return; }
   if (h.staff){ ME = h.staff; saveHomeCache(h.staff, h.today||null); enterHome(h.today||null); }
   else { clearHomeCache(); renderBind(h.candidates||[]); show("scr-bind"); }
