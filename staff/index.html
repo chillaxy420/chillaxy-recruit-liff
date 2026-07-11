@@ -45,10 +45,24 @@
   .pill:active { background: var(--main); color: #fff; }
   .pill.primary { background: var(--cta); color: #fff; }
   .pill:disabled { opacity: .45; }
-  select, input[type=time] {
+  select, input[type=time], input[type=date], input[type=text], input[type=number] {
     width: 100%; border: 1px solid var(--border); border-radius: 14px; padding: 9px 12px;
     font-size: 15px; background: #fff; color: var(--text); -webkit-appearance: none; appearance: none;
   }
+  textarea { width: 100%; border: 1px solid var(--border); border-radius: 14px; padding: 9px 12px;
+    font-size: 15px; background: #fff; color: var(--text); font-family: inherit; min-height: 62px; resize: vertical; }
+  .field { margin-top: 12px; }
+  .field > label { display: block; font-size: 12.5px; color: #666; margin-bottom: 4px; font-weight: 600; }
+  .row2 { display: flex; gap: 8px; } .row2 > * { flex: 1; }
+  .kpi { display: flex; gap: 10px; margin-top: 10px; font-size: 13px; color: #555; }
+  .kpi b { color: var(--main); }
+  .cash-list { list-style: none; margin-top: 6px; font-size: 13px; }
+  .cash-list li { display: flex; gap: 8px; padding: 7px 2px; border-bottom: 1px solid #eee; align-items: baseline; }
+  .cash-list li .cd { width: 40px; color: #999; flex: none; }
+  .cash-list li .cn { flex: 1; } .cash-list li .ct { color: #888; font-size: 11px; }
+  .cash-list li .cm { font-weight: 700; white-space: nowrap; }
+  .cash-list li .in { color: var(--ok); } .cash-list li .out { color: var(--cta); }
+  .badge { display: inline-block; background: var(--sub); color: var(--cta); font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px; margin-left: 6px; }
   .today-shift { background: var(--main); color: #fff; border-radius: 20px; padding: 18px; margin-top: 14px; }
   .today-shift .big { font-size: 20px; font-weight: 700; margin: 4px 0; }
   .att-row { display: flex; gap: 10px; margin-top: 14px; }
@@ -105,10 +119,10 @@
     <div id="today-area"></div>
     <button class="menu-btn" onclick="openShift()"><span class="ico">📅</span><span>シフトを確認する<small>確定シフト・勤怠を見る</small></span><span class="arw">›</span></button>
     <button class="menu-btn" onclick="openWish()"><span class="ico">✍️</span><span>希望シフトを提出する<small>出勤希望・休み希望を登録</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openKintone('daily')"><span class="ico">📝</span><span>日報<small>記入・過去分の確認/編集</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openKintone('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>記入・確認/編集</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openKintone('monthly')"><span class="ico">📊</span><span>月次レポート<small>記入・確認/編集</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openKintone('cash')"><span class="ico">💴</span><span>現金出納帳<small>記入・確認/編集</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openNippou()"><span class="ico">📝</span><span>日報<small>この画面で記入・提出（早番→遅番で追記）</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openCash()"><span class="ico">💴</span><span>現金出納帳<small>この画面で明細を追加</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openLink('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
+    <button class="menu-btn" onclick="openLink('monthly')"><span class="ico">📊</span><span>月次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
   </div>
 </div>
 
@@ -137,6 +151,74 @@
   </div>
 </div>
 
+<!-- 画面4: 日報（LIFF内入力） -->
+<div class="screen" id="scr-nippou">
+  <header class="app"><button class="back" onclick="show('scr-home')">‹</button><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub">日報</div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <h3>店舗を選択</h3>
+      <div class="row2"><select id="np-store"></select><button class="pill" style="margin-top:0;flex:0 0 92px" onclick="loadNippou()">読込</button></div>
+      <p class="muted" id="np-hint" style="margin-top:8px">店舗を選び「読込」を押すと、本日の日報を表示します。早番が作成し、遅番が同じ日報に追記して締めます。</p>
+    </div>
+    <div id="np-form" style="display:none">
+      <div class="card">
+        <div id="np-state" style="font-size:13px"></div>
+        <div class="field"><label>担当者名（早番）</label><input type="text" id="np-t1"></div>
+        <div class="field"><label>担当者名（遅番）</label><input type="text" id="np-t2"></div>
+        <div class="field"><label>担当者（その他）</label><input type="text" id="np-t3"></div>
+        <div class="field"><label>天気</label><select id="np-weather"></select></div>
+        <div class="row2">
+          <div class="field"><label>売上目標(円)</label><input type="number" id="np-goal" inputmode="numeric"></div>
+          <div class="field"><label>売上(円)</label><input type="number" id="np-sales" inputmode="numeric" oninput="npKpi()"></div>
+        </div>
+        <div class="field"><label>会計数(客数)</label><input type="number" id="np-count" inputmode="numeric" oninput="npKpi()"></div>
+        <div class="kpi" id="np-kpi"></div>
+      </div>
+      <div class="card">
+        <div class="field"><label>良かった接客</label><textarea id="np-good"></textarea></div>
+        <div class="field"><label>悪かった接客 / 改善方法</label><textarea id="np-bad"></textarea></div>
+        <div class="field"><label>お客様の声 / お客様情報</label><textarea id="np-voice"></textarea></div>
+        <div class="field"><label>お店のためにしたこと</label><textarea id="np-did"></textarea></div>
+        <div class="field"><label>在庫切れ</label><textarea id="np-stock"></textarea></div>
+        <div class="field"><label>発注済・入荷予定</label><textarea id="np-order"></textarea></div>
+        <div class="field"><label>その他共有事項</label><textarea id="np-other"></textarea></div>
+      </div>
+      <div class="err" id="np-err"></div>
+      <button class="pill primary" id="np-save" onclick="saveNippou()">日報を保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 画面5: 現金出納帳（LIFF内入力） -->
+<div class="screen" id="scr-cash">
+  <header class="app"><button class="back" onclick="show('scr-home')">‹</button><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub">現金出納帳</div></div></header>
+  <div class="wrap">
+    <div class="card">
+      <h3>店舗を選択</h3>
+      <div class="row2"><select id="cash-store"></select><button class="pill" style="margin-top:0;flex:0 0 92px" onclick="loadCash()">読込</button></div>
+      <p class="muted" id="cash-hint" style="margin-top:8px">店舗を選び「読込」を押すと、当月の明細と入力欄を表示します。</p>
+    </div>
+    <div class="card" id="cash-listcard" style="display:none">
+      <h3 id="cash-title">当月の明細</h3>
+      <div id="cash-body"></div>
+    </div>
+    <div class="card" id="cash-form" style="display:none">
+      <h3>明細を1行追加</h3>
+      <div class="field"><label>日付</label><input type="date" id="c-date"></div>
+      <div class="field"><label>内容</label><select id="c-naiyou"></select></div>
+      <div class="field"><label>取引先 / 現金移動先</label><input type="text" id="c-torihiki" placeholder="例：セブンイレブン / 楽天銀行"></div>
+      <div class="row2">
+        <div class="field"><label>入金(円)</label><input type="number" id="c-in" inputmode="numeric"></div>
+        <div class="field"><label>出金(円)</label><input type="number" id="c-out" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>担当者名</label><input type="text" id="c-tantou"></div>
+      <div class="field"><label>メモ（任意）</label><input type="text" id="c-memo"></div>
+      <div class="err" id="cash-err"></div>
+      <button class="pill primary" id="cash-add" onclick="addCash()">この明細を追加する</button>
+    </div>
+  </div>
+</div>
+
 <div class="loading" id="loading"><div class="spinner"></div><p id="loading-msg">読み込み中…</p></div>
 <div class="toast" id="toast"></div>
 
@@ -161,10 +243,13 @@ async function api(action, extra){
   return res.json();
 }
 
-function openKintone(key){
-  const url = window.CONFIG.KINTONE[key];
+function openLink(key){
+  const url = window.CONFIG.KINTONE_LINK[key];
   if (liffReady && liff.openWindow) liff.openWindow({ url, external: true });
   else window.open(url, "_blank");
+}
+function fillOptions(sel, arr, ph){
+  sel.innerHTML = (ph ? `<option value="">${esc(ph)}</option>` : "") + arr.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
 }
 
 // ---- 起動 ----
@@ -332,6 +417,145 @@ async function submitWish(){
     toast(`${r.count}日分の希望を提出しました`);
     setTimeout(()=>show("scr-home"), 1200);
   } catch(e){ $("wish-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+// ---- 日報（LIFF内入力） ----
+let NP_STATE = { exists: false };
+function npKpi(){
+  const sales = parseFloat($("np-sales").value)||0, cnt = parseFloat($("np-count").value)||0, goal = parseFloat($("np-goal").value)||0;
+  const tanka = cnt ? Math.round(sales/cnt) : 0;
+  const rate = goal ? Math.round(sales/goal*100) : 0;
+  $("np-kpi").innerHTML = `客単価 <b>¥${tanka.toLocaleString()}</b>　目標達成率 <b>${rate}%</b>`;
+}
+function openNippou(){
+  show("scr-nippou");
+  fillOptions($("np-store"), window.CONFIG.NIPPOU_STORES, "店舗を選択");
+  fillOptions($("np-weather"), window.CONFIG.WEATHER, "—");
+  $("np-store").value = "";
+  $("np-form").style.display = "none";
+  $("np-hint").style.display = "block";
+  $("np-hint").textContent = "店舗を選び「読込」を押すと、本日の日報を表示します。早番が作成し、遅番が同じ日報に追記して締めます。";
+}
+async function loadNippou(){
+  const store = $("np-store").value;
+  if(!store){ $("np-hint").textContent = "店舗を選んでください。"; return; }
+  loading(true,"日報を読み込み中…");
+  try {
+    const r = await api("nippou_get", { store });
+    if(!r.ok){ $("np-hint").textContent = r.error||"取得に失敗しました"; return; }
+    NP_STATE = r;
+    const v = r.values || {};
+    $("np-t1").value = v["担当者名１"] || (!r.exists ? (ME.name||"") : "");
+    $("np-t2").value = v["担当者名２"] || "";
+    $("np-t3").value = v["担当者３"] || "";
+    $("np-weather").value = v["天気１"] || "";
+    $("np-goal").value = v["売上目標"] || "";
+    $("np-sales").value = v["売上"] || "";
+    $("np-count").value = v["会計数"] || "";
+    $("np-good").value = v["良かった接客"] || "";
+    $("np-bad").value = v["悪かった接客"] || "";
+    $("np-voice").value = v["雑談"] || "";
+    $("np-did").value = v["お店のためにしたこと"] || "";
+    $("np-stock").value = v["在庫切れ"] || "";
+    $("np-order").value = v["入荷予定商品"] || "";
+    $("np-other").value = v["その他共有事項"] || "";
+    npKpi();
+    $("np-state").innerHTML = r.exists
+      ? `<span class="badge">編集</span> 本日(${esc(r.date)}) ${esc(store)} の日報は作成済みです。遅番の締めなどを追記して保存してください。`
+      : `<span class="badge">新規</span> 本日(${esc(r.date)}) ${esc(store)} の日報を新規作成します。`;
+    $("np-hint").style.display = "none";
+    $("np-form").style.display = "block";
+  } catch(e){ $("np-hint").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+async function saveNippou(){
+  const store = $("np-store").value;
+  if(!store) return;
+  const fields = {
+    "担当者名１": $("np-t1").value.trim(), "担当者名２": $("np-t2").value.trim(), "担当者３": $("np-t3").value.trim(),
+    "天気１": $("np-weather").value, "売上目標": $("np-goal").value, "売上": $("np-sales").value, "会計数": $("np-count").value,
+    "良かった接客": $("np-good").value, "悪かった接客": $("np-bad").value, "雑談": $("np-voice").value,
+    "お店のためにしたこと": $("np-did").value, "在庫切れ": $("np-stock").value, "入荷予定商品": $("np-order").value,
+    "その他共有事項": $("np-other").value
+  };
+  $("np-err").textContent = "";
+  loading(true,"日報を保存中…");
+  try {
+    const r = await api("nippou_save", { store, fields });
+    if(!r.ok){ $("np-err").textContent = r.error||"保存に失敗しました"; return; }
+    toast(r.created ? "日報を作成しました" : "日報を更新しました");
+    setTimeout(()=>show("scr-home"), 1200);
+  } catch(e){ $("np-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+// ---- 現金出納帳（LIFF内入力） ----
+function openCash(){
+  show("scr-cash");
+  fillOptions($("cash-store"), window.CONFIG.CASH_STORES, "店舗を選択");
+  fillOptions($("c-naiyou"), window.CONFIG.CASH_NAIYOU, "選択してください");
+  $("cash-store").value = "";
+  $("cash-listcard").style.display = "none";
+  $("cash-form").style.display = "none";
+  $("cash-hint").style.display = "block";
+  $("cash-hint").textContent = "店舗を選び「読込」を押すと、当月の明細と入力欄を表示します。";
+  const now = new Date();
+  $("c-date").value = `${now.getFullYear()}-${("0"+(now.getMonth()+1)).slice(-2)}-${("0"+now.getDate()).slice(-2)}`;
+}
+async function loadCash(){
+  const store = $("cash-store").value;
+  if(!store){ $("cash-hint").textContent = "店舗を選んでください。"; return; }
+  loading(true,"現金出納帳を読み込み中…");
+  try {
+    const r = await api("cash_get", { store });
+    if(!r.ok){ $("cash-hint").textContent = r.error||"取得に失敗しました"; return; }
+    if(!r.exists){
+      $("cash-hint").style.display = "block";
+      $("cash-hint").textContent = r.error || "当月のレコードがまだ作成されていません。バックオフィスにご連絡ください。";
+      $("cash-listcard").style.display = "none"; $("cash-form").style.display = "none";
+      return;
+    }
+    renderCashRows(r.rows||[]);
+    $("cash-title").textContent = `${store} 当月の明細（${(r.rows||[]).length}件）`;
+    $("cash-hint").style.display = "none";
+    $("cash-listcard").style.display = "block";
+    $("cash-form").style.display = "block";
+    $("c-tantou").value = ME.name || "";
+  } catch(e){ $("cash-hint").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+function renderCashRows(rows){
+  if(!rows.length){ $("cash-body").innerHTML = '<p class="muted">まだ明細はありません。</p>'; return; }
+  const last = rows.slice(-12).reverse();
+  let html = '<ul class="cash-list">' + last.map(r=>{
+    const d = (r.日付||"").slice(5);
+    const amt = (r.入金!=="" && r.入金!=null) ? `<span class="cm in">+¥${Number(r.入金).toLocaleString()}</span>`
+              : ((r.出金!=="" && r.出金!=null) ? `<span class="cm out">-¥${Number(r.出金).toLocaleString()}</span>` : "");
+    return `<li><span class="cd">${esc(d)}</span><span class="cn">${esc(r.内容)}<span class="ct"> ${esc(r.取引先||"")}</span></span>${amt}</li>`;
+  }).join("") + '</ul>';
+  if(rows.length>12) html += `<p class="muted" style="margin-top:6px">最新12件を表示（全${rows.length}件）</p>`;
+  $("cash-body").innerHTML = html;
+}
+async function addCash(){
+  const store = $("cash-store").value;
+  if(!store) return;
+  const row = {
+    日付: $("c-date").value, 内容: $("c-naiyou").value, 取引先: $("c-torihiki").value.trim(),
+    入金: $("c-in").value, 出金: $("c-out").value, 担当者名: $("c-tantou").value.trim(), 従業員メモ: $("c-memo").value.trim()
+  };
+  $("cash-err").textContent = "";
+  if(!row.内容){ $("cash-err").textContent = "内容を選択してください"; return; }
+  if(!row.取引先){ $("cash-err").textContent = "取引先を入力してください"; return; }
+  if(!row.入金 && !row.出金){ $("cash-err").textContent = "入金または出金を入力してください"; return; }
+  loading(true,"明細を追加中…");
+  try {
+    const r = await api("cash_add", { store, row });
+    if(!r.ok){ $("cash-err").textContent = r.error||"追加に失敗しました"; return; }
+    toast("明細を追加しました");
+    $("c-torihiki").value=""; $("c-in").value=""; $("c-out").value=""; $("c-memo").value="";
+    await loadCash();
+  } catch(e){ $("cash-err").textContent = "通信エラー: "+(e.message||e); }
   finally { loading(false); }
 }
 
