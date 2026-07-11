@@ -163,6 +163,7 @@
     <div id="np-form" style="display:none">
       <div class="card">
         <div id="np-state" style="font-size:13px"></div>
+        <button class="pill" style="margin-top:10px" onclick="fetchNippouAir()">📥 Airレジから売上を取込</button>
         <div class="field"><label>担当者名（早番）</label><input type="text" id="np-t1"></div>
         <div class="field"><label>担当者名（遅番）</label><input type="text" id="np-t2"></div>
         <div class="field"><label>担当者（その他）</label><input type="text" id="np-t3"></div>
@@ -203,6 +204,7 @@
       <div id="cash-body"></div>
     </div>
     <div class="card" id="cash-form" style="display:none">
+      <button class="pill" id="cash-air-btn" style="display:none;margin-top:0;margin-bottom:6px" onclick="fetchCashAir()">📥 Airレジから当日分を取込</button>
       <h3>明細を1行追加</h3>
       <div class="field"><label>日付</label><input type="date" id="c-date"></div>
       <div class="field"><label>内容</label><select id="c-naiyou"></select></div>
@@ -224,7 +226,7 @@
 
 <script>
 "use strict";
-let liffReady = false, ME = null;
+let liffReady = false, ME = null, TODAY = null;
 const $ = (id) => document.getElementById(id);
 const TIMES = (() => { const a = []; for (let h = 6; h <= 26; h++) { const hh = (h % 24); a.push(("0"+hh).slice(-2)+":00"); a.push(("0"+hh).slice(-2)+":30"); } return a; })();
 const DOW = ["日","月","火","水","木","金","土"];
@@ -233,6 +235,21 @@ function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.r
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function loading(on,msg){ if(msg)$("loading-msg").textContent=msg; $("loading").classList.toggle("show",on); }
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+// ---- 起動高速化: localStorageキャッシュ(stale-while-revalidate) ----
+function todayStr(){ const n=new Date(); return `${n.getFullYear()}-${("0"+(n.getMonth()+1)).slice(-2)}-${("0"+n.getDate()).slice(-2)}`; }
+function loadHomeCache(){
+  try {
+    const c = JSON.parse(localStorage.getItem("staff_home")||"null");
+    if(!c || !c.staff) return null;
+    if(c.date !== todayStr()) return { staff:c.staff, today:null }; // 別日: 名前は使うが当日データは破棄
+    return c;
+  } catch(e){ return null; }
+}
+function saveHomeCache(staff, today){
+  try { localStorage.setItem("staff_home", JSON.stringify({ staff, today, date: todayStr() })); } catch(e){}
+}
+function clearHomeCache(){ try { localStorage.removeItem("staff_home"); } catch(e){} }
 
 async function api(action, extra){
   const body = Object.assign({ action }, extra||{});
@@ -259,10 +276,15 @@ async function boot(){
     if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
     liffReady = true;
   } catch(e){ console.warn("liff.init failed", e); }
-  const who = await api("whoami");
-  if (!who.ok){ show("scr-bind"); $("bind-err").textContent = who.error||"エラー"; return; }
-  if (who.staff){ ME = who.staff; enterHome(); }
-  else { renderBind(who.candidates||[]); show("scr-bind"); }
+  // キャッシュがあれば即ホーム描画（体感即時）。裏で home 1往復で再検証。
+  const cache = loadHomeCache();
+  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); }
+  let h;
+  try { h = await api("home"); }
+  catch(e){ if(!cache){ show("scr-bind"); $("bind-err").textContent = "通信エラー: "+(e.message||e); } return; }
+  if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-err").textContent = (h&&h.error)||"エラー"; } return; }
+  if (h.staff){ ME = h.staff; saveHomeCache(h.staff, h.today||null); enterHome(h.today||null); }
+  else { clearHomeCache(); renderBind(h.candidates||[]); show("scr-bind"); }
 }
 
 function renderBind(cands){
@@ -290,12 +312,15 @@ function initYM(prefixY, prefixM, baseMonthOffset){
   y.value = target.getFullYear(); m.value = target.getMonth()+1;
 }
 
-async function enterHome(){
+function enterHome(today){
   $("home-sub").textContent = "STAFF — " + (ME.name||"");
   show("scr-home");
-  const t = await api("today");
+  renderToday(today);
+}
+function renderToday(t){
+  TODAY = t || null;
   const area = $("today-area");
-  if (!t.ok || !t.shift){
+  if (!t || !t.ok || !t.shift){
     area.innerHTML = `<div class="card"><h3>今日のシフト</h3><p class="muted">本日の出勤予定はありません。</p></div>`;
     return;
   }
@@ -325,6 +350,7 @@ async function attend(response, late){
     const r = await api("attend", { response, lateMinutes: late });
     if(!r.ok){ toast(r.error||"送信に失敗しました"); return; }
     $("att-zone").innerHTML = `<div class="att-done">${response==="遅刻"?("🕐 遅刻("+late+"分)で報告しました"):"🟢 時間通りで報告しました"}</div>`;
+    if (TODAY){ TODAY.attendance = { response: response, lateMinutes: late }; saveHomeCache(ME, TODAY); }
     toast("出勤確認を送信しました");
   } catch(e){ toast("通信エラー"); } finally { loading(false); }
 }
@@ -516,15 +542,18 @@ async function loadCash(){
       $("cash-listcard").style.display = "none"; $("cash-form").style.display = "none";
       return;
     }
-    renderCashRows(r.rows||[]);
-    $("cash-title").textContent = `${store} 当月の明細（${(r.rows||[]).length}件）`;
+    CASH_ROWS = r.rows || [];
+    renderCashRows(CASH_ROWS);
+    $("cash-title").textContent = `${store} 当月の明細（${CASH_ROWS.length}件）`;
     $("cash-hint").style.display = "none";
     $("cash-listcard").style.display = "block";
     $("cash-form").style.display = "block";
     $("c-tantou").value = ME.name || "";
+    $("cash-air-btn").style.display = (window.CONFIG.CASH_AIRREGI_STORES||[]).indexOf(store) >= 0 ? "block" : "none";
   } catch(e){ $("cash-hint").textContent = "通信エラー: "+(e.message||e); }
   finally { loading(false); }
 }
+let CASH_ROWS = [];
 function renderCashRows(rows){
   if(!rows.length){ $("cash-body").innerHTML = '<p class="muted">まだ明細はありません。</p>'; return; }
   const last = rows.slice(-12).reverse();
@@ -556,6 +585,58 @@ async function addCash(){
     $("c-torihiki").value=""; $("c-in").value=""; $("c-out").value=""; $("c-memo").value="";
     await loadCash();
   } catch(e){ $("cash-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+// ---- Airレジ取込 ----
+async function fetchNippouAir(){
+  const store = $("np-store").value;
+  if(!store){ $("np-err").textContent = "店舗を選んでください"; return; }
+  $("np-err").textContent = "";
+  loading(true,"Airレジから取得中…（1〜2分かかります）");
+  try {
+    const r = await api("airregi_daily", { store });
+    if(!r.ok){ $("np-err").textContent = r.error||"取得に失敗しました"; return; }
+    const v = r.values || {};
+    if(v["売上目標"] !== "" && v["売上目標"] != null) $("np-goal").value = v["売上目標"];
+    if(v["売上"] !== "" && v["売上"] != null) $("np-sales").value = v["売上"];
+    if(v["会計数"] !== "" && v["会計数"] != null) $("np-count").value = v["会計数"];
+    npKpi();
+    toast(r.warning ? "売上を取込みました（当日は見込み値）" : "Airレジから売上を取込みました");
+  } catch(e){ $("np-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
+}
+
+async function fetchCashAir(){
+  const store = $("cash-store").value;
+  if(!store) return;
+  $("cash-err").textContent = "";
+  loading(true,"Airレジから取得中…（1〜2分かかります）");
+  let rows;
+  try {
+    const r = await api("airregi_cash", { store });
+    if(!r.ok){ $("cash-err").textContent = r.error||"取得に失敗しました"; loading(false); return; }
+    rows = r.rows || [];
+  } catch(e){ $("cash-err").textContent = "通信エラー: "+(e.message||e); loading(false); return; }
+  loading(false);
+  if(!rows.length){ toast("Airレジ側に当日の対象取引がありませんでした"); return; }
+  // 簡易重複除外: 当月明細と 日付+内容+入金+出金 が一致する行はスキップ
+  const key = r => `${r.日付}|${r.内容}|${r.入金}|${r.出金}`;
+  const have = new Set(CASH_ROWS.map(key));
+  const fresh = rows.filter(r => !have.has(key(r)));
+  if(!fresh.length){ toast("取得した" + rows.length + "件はすべて取込済みです"); return; }
+  const skipped = rows.length - fresh.length;
+  if(!confirm("Airレジから" + fresh.length + "件を現金出納帳に追加します。よろしいですか？" + (skipped ? ("\n（既存" + skipped + "件はスキップ）") : ""))) return;
+  loading(true,"追加中…");
+  let added = 0;
+  try {
+    for(const row of fresh){
+      const rr = await api("cash_add", { store, row });
+      if(rr.ok) added++;
+    }
+    toast(added + "件を追加しました");
+    await loadCash();
+  } catch(e){ $("cash-err").textContent = "追加中にエラー: "+(e.message||e); }
   finally { loading(false); }
 }
 
