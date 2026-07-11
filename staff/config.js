@@ -6,7 +6,9 @@ window.CONFIG = {
   // 週次・月次レポートは現行どおり kintone モバイル一覧ビューへ（LIFF内化は日報・現金出納帳のみ）
   KINTONE_LINK: {
     weekly:  "https://ny76p.cybozu.com/k/m/214/",
-    monthly: "https://ny76p.cybozu.com/k/m/216/"
+    monthly: "https://ny76p.cybozu.com/k/m/216/",
+    mf_expense: "https://expense.moneyforward.com/",  // MFクラウド経費 ログイン（専用URLがあれば差替）
+    mf_payroll: "https://payroll.moneyforward.com/"   // MFクラウド給与 ログイン（専用URLがあれば差替）
   },
 
   // 日報(app110) 店舗名 DROP_DOWN の正式選択肢（value は完全一致必須）
