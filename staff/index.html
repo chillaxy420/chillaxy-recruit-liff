@@ -104,10 +104,18 @@
   <div class="wrap">
     <div class="card">
       <h3>はじめての方へ</h3>
-      <p class="muted">ご本人を確認するため、お名前を選んでください。次回からは自動で開きます。</p>
-      <div style="margin-top:14px"><select id="bind-name"></select></div>
-      <div class="err" id="bind-err"></div>
-      <button class="pill primary" id="bind-btn" onclick="doBind()">この名前で始める</button>
+      <div id="bind-code-area">
+        <p class="muted">従業員確認のため、招待コードを入力してください（店舗で配布されています）。</p>
+        <div style="margin-top:14px"><input type="text" id="bind-code" placeholder="招待コード" autocapitalize="characters" autocomplete="one-time-code"></div>
+        <div class="err" id="bind-code-err"></div>
+        <button class="pill primary" id="bind-code-btn" onclick="verifyCode()">次へ</button>
+      </div>
+      <div id="bind-name-area" style="display:none">
+        <p class="muted">ご本人を確認するため、お名前を選んでください。次回からは自動で開きます。</p>
+        <div style="margin-top:14px"><select id="bind-name"></select></div>
+        <div class="err" id="bind-err"></div>
+        <button class="pill primary" id="bind-btn" onclick="doBind()">この名前で始める</button>
+      </div>
     </div>
   </div>
 </div>
@@ -284,11 +292,34 @@ async function boot(){
   if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); }
   let h;
   try { h = await api("home"); }
-  catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-err").textContent = "通信エラー: "+(e.message||e); } return; }
+  catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-code-err").textContent = "通信エラー: "+(e.message||e); } return; }
   loading(false);
-  if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-err").textContent = (h&&h.error)||"エラー"; } return; }
+  if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-code-err").textContent = (h&&h.error)||"エラー"; } return; }
   if (h.staff){ ME = h.staff; saveHomeCache(h.staff, h.today||null); enterHome(h.today||null); }
-  else { clearHomeCache(); renderBind(h.candidates||[]); show("scr-bind"); }
+  else { clearHomeCache(); show("scr-bind"); } // 招待コード入力から（氏名一覧はコード検証後にのみ取得）
+}
+
+// 招待コード検証: コード付き home で候補一覧を取得できたら氏名選択へ進む
+let INVITE_CODE = "";
+async function verifyCode(){
+  const code = $("bind-code").value.trim();
+  if(!code){ $("bind-code-err").textContent = "招待コードを入力してください"; return; }
+  loading(true, "確認中…");
+  try {
+    const h = await api("home", { inviteCode: code });
+    if (h && h.ok && h.staff){ ME = h.staff; saveHomeCache(h.staff, h.today||null); enterHome(h.today||null); return; }
+    if (h && h.ok && h.candidates){
+      INVITE_CODE = code;
+      $("bind-code-err").textContent = "";
+      renderBind(h.candidates);
+      $("bind-code-area").style.display = "none";
+      $("bind-name-area").style.display = "";
+      if (!h.candidates.length) $("bind-err").textContent = "選択できる名前がありません。管理者にご連絡ください。";
+      return;
+    }
+    $("bind-code-err").textContent = (h && h.codeError) ? "招待コードが正しくありません" : ((h && h.error) || "確認に失敗しました");
+  } catch(e){ $("bind-code-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
 }
 
 function renderBind(cands){
@@ -299,7 +330,7 @@ async function doBind(){
   if(!staffId){ $("bind-err").textContent="お名前を選んでください"; return; }
   loading(true,"連携中…");
   try {
-    const r = await api("bind", { staffId });
+    const r = await api("bind", { staffId, inviteCode: INVITE_CODE });
     if(!r.ok){ $("bind-err").textContent = r.error||"連携に失敗しました"; return; }
     ME = r.staff; enterHome();
   } catch(e){ $("bind-err").textContent = "通信エラー: "+(e.message||e); }
