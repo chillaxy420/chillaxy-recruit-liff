@@ -481,6 +481,13 @@ async function submitForm() {
     });
     const out = await res.json();
     if (!out.ok) throw new Error(out.error || "送信に失敗しました");
+    // 応募者本人からトークへ氏名を送信（チャット一覧に氏名付きで載せ、採用担当が個別対応しやすくする）
+    // LINEアプリ内でトークから開いた場合のみ成功。失敗しても応募処理には影響させない。
+    try {
+      if (liffReady && liff.isInClient() && liff.sendMessages) {
+        await liff.sendMessages([{ type: "text", text: "【応募】" + body.name + "（" + currentJob.title + "）" }]);
+      }
+    } catch (e) { console.warn("sendMessages failed", e); }
     show("scr-done");
   } catch (e) {
     errBox.textContent = "送信できませんでした：" + (e && e.message || e) +

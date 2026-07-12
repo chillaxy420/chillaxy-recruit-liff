@@ -334,7 +334,15 @@ async function doBind(){
   try {
     const r = await api("bind", { staffId, inviteCode: INVITE_CODE });
     if(!r.ok){ $("bind-err").textContent = r.error||"連携に失敗しました"; return; }
-    ME = r.staff; enterHome();
+    ME = r.staff;
+    // 初回連携完了時、本人からトークへ氏名を送信（チャット一覧に氏名付きで載せる）。
+    // bindはこの初回のみ通る（次回以降はwhoamiでホーム直行）。LINEアプリ内でトークから開いた時のみ成功。
+    try {
+      if (liffReady && liff.isInClient() && liff.sendMessages) {
+        await liff.sendMessages([{ type: "text", text: "【従業員連携】" + (ME.name || "") }]);
+      }
+    } catch(e){ console.warn("sendMessages failed", e); }
+    enterHome();
   } catch(e){ $("bind-err").textContent = "通信エラー: "+(e.message||e); }
   finally { loading(false); }
 }
