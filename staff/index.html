@@ -282,6 +282,8 @@ function fillOptions(sel, arr, ph){
 // ---- 起動 ----
 async function boot(){
   loading(true, "起動中…");
+  // ?reset=1 でローカルキャッシュを消去（機種変更・連携やり直し・動作確認用）
+  if (new URLSearchParams(location.search).get("reset")) { clearHomeCache(); }
   try {
     await liff.init({ liffId: window.CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; } // リダイレクト（ローディングのまま遷移）
