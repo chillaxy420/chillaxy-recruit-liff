@@ -234,6 +234,30 @@
         <label>希望する雇用形態<span class="req">必須</span></label>
         <div class="radio-row" id="f-emp"></div>
       </div>
+      <div id="f-parttime" style="display:none">
+        <div class="field">
+          <label>想定の週の労働時間<span class="req">必須</span></label>
+          <select id="f-hours">
+            <option value="">選択してください</option>
+            <option>10時間未満</option>
+            <option>10〜20時間</option>
+            <option>20〜30時間</option>
+            <option>30〜40時間</option>
+            <option>40時間以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>メインで働ける時間帯<span class="req">必須</span></label>
+          <select id="f-timeslot">
+            <option value="">選択してください</option>
+            <option>午前（〜12時）</option>
+            <option>日中（12〜17時）</option>
+            <option>夕方〜夜（17時〜）</option>
+            <option>終日OK</option>
+            <option>応相談</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -384,10 +408,14 @@ function openForm() {
   $("form-err").textContent = "";
   show("scr-form");
 }
+// アルバイト・業務委託のとき想定週労働時間/時間帯(契約書用)を表示
+const PARTTIME_EMP = ["アルバイト", "業務委託"];
 function pickEmp(lab) {
   document.querySelectorAll("#f-emp label").forEach(l => l.classList.remove("on"));
   lab.classList.add("on");
   lab.querySelector("input").checked = true;
+  const v = lab.querySelector("input").value;
+  $("f-parttime").style.display = PARTTIME_EMP.includes(v) ? "" : "none";
 }
 
 // ファイル選択表示
@@ -433,7 +461,12 @@ function validate() {
   if (!email) errs.push("メールアドレスを入力してください");
   else if (!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(email)) errs.push("メールアドレスの形式が正しくありません");
   if (!$("f-age").value.trim()) errs.push("年齢を入力してください");
-  if (!document.querySelector('#f-emp input:checked')) errs.push("雇用形態を選択してください");
+  var empSel = document.querySelector('#f-emp input:checked');
+  if (!empSel) errs.push("雇用形態を選択してください");
+  else if (PARTTIME_EMP.includes(empSel.value)) {
+    if (!$("f-hours").value) errs.push("想定の週の労働時間を選択してください");
+    if (!$("f-timeslot").value) errs.push("メインで働ける時間帯を選択してください");
+  }
   for (const [d, t, lbl] of [["f-d1","f-t1","第1希望"],["f-d2","f-t2","第2希望"],["f-d3","f-t3","第3希望"]]) {
     if (!$(d).value || !$(t).value) errs.push(`面接候補日時の${lbl}（日付と時刻）を入力してください`);
   }
@@ -470,6 +503,8 @@ async function submitForm() {
       email: $("f-email").value.trim(),
       age: $("f-age").value.trim(),
       employment: document.querySelector('#f-emp input:checked').value,
+      weeklyHours: $("f-hours").value || "",
+      timeSlot: $("f-timeslot").value || "",
       slots,
       note: $("f-note").value.trim(),
       resume, career,
