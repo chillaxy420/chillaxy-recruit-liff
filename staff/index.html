@@ -297,7 +297,15 @@ async function boot(){
   catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-code-err").textContent = "通信エラー: "+(e.message||e); } return; }
   loading(false);
   if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-code-err").textContent = (h&&h.error)||"エラー"; } return; }
-  if (h.staff){ ME = h.staff; saveHomeCache(h.staff, h.today||null); enterHome(h.today||null); }
+  if (h.staff){
+    ME = h.staff; saveHomeCache(h.staff, h.today||null);
+    if (cache) { // キャッシュで表示済み: 別画面へ移動中でもホームへ戻さず、データのみ更新
+      $("home-sub").textContent = "STAFF — " + (ME.name||"");
+      renderToday(h.today||null);
+    } else {
+      enterHome(h.today||null);
+    }
+  }
   else { clearHomeCache(); show("scr-bind"); } // 招待コード入力から（氏名一覧はコード検証後にのみ取得）
 }
 
