@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex">
+<title>CHILLAXY 面接日程 再調整</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<style>
+  :root {
+    --main: #091f42;
+    --sub: #f9cfd1;
+    --cta: #cc2055;
+    --text: #242424;
+    --border: #dddddd;
+    --bg: #FAFAFA;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    color: var(--text); background: var(--bg);
+    font-size: 15px; line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .screen { display: none; min-height: 100vh; padding-bottom: 40px; }
+  .screen.active { display: block; }
+  header.app {
+    background: var(--main); color: #fff;
+    padding: 18px 20px 16px; position: sticky; top: 0; z-index: 10;
+  }
+  header.app h1 { font-size: 16px; letter-spacing: .04em; }
+  header.app .sub { font-size: 11px; opacity: .75; letter-spacing: 0.05em; margin-top: 3px; }
+  .wrap { padding: 16px; max-width: 640px; margin: 0 auto; }
+  .card {
+    background: #fff; border-radius: 20px; margin-top: 14px;
+    box-shadow: 1px 1px 3px 0 rgba(0,0,0,.12); padding: 16px;
+    border-top: 3px solid var(--sub);
+  }
+  .card p.lead { font-size: 13.5px; color: #555; }
+  .field { margin-top: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--main); margin-bottom: 4px; }
+  .req {
+    display: inline-block; background: var(--cta); color: #fff;
+    font-size: 10px; border-radius: 4px; padding: 0 6px; margin-left: 6px; vertical-align: 2px;
+  }
+  .dt-row { display: flex; gap: 8px; }
+  .dt-row input {
+    flex: 1; min-width: 0; padding: 10px; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 10px; background: #fff;
+    -webkit-appearance: none; appearance: none;
+  }
+  .err { color: var(--cta); font-size: 12.5px; margin-top: 12px; white-space: pre-wrap; }
+  .pill {
+    display: block; width: 100%; margin-top: 18px; padding: 14px;
+    border: none; border-radius: 999px; font-size: 15px; font-weight: 700;
+    background: var(--cta); color: #fff; cursor: pointer;
+  }
+  .pill:disabled { opacity: .5; }
+  .done-wrap { text-align: center; padding: 80px 24px 0; }
+  .done-mark {
+    width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%;
+    background: var(--main); color: #fff; font-size: 30px; line-height: 64px;
+  }
+  .done-wrap h2 { color: var(--main); font-size: 18px; margin-bottom: 10px; }
+  .done-wrap p { font-size: 13.5px; color: #555; }
+  .loading {
+    display: none; position: fixed; inset: 0; background: rgba(255,255,255,.75);
+    z-index: 50; text-align: center; padding-top: 40vh;
+  }
+  .loading.show { display: block; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 10px; border-radius: 50%;
+    border: 4px solid var(--sub); border-top-color: var(--cta);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="screen active" id="scr-form">
+  <header class="app">
+    <h1>面接日程の再調整</h1>
+    <div class="sub">CHILLAXY RECRUIT</div>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <p class="lead">申し訳ございませんが、先にいただいた候補日での調整が難しいため、改めてご都合の良い日時を3つご入力ください。担当者が確認し、面接日時を確定してご連絡します。</p>
+      <div class="field">
+        <label>第1希望<span class="req">必須</span></label>
+        <div class="dt-row"><input type="date" id="f-d1"><input type="time" id="f-t1" step="900"></div>
+      </div>
+      <div class="field">
+        <label>第2希望<span class="req">必須</span></label>
+        <div class="dt-row"><input type="date" id="f-d2"><input type="time" id="f-t2" step="900"></div>
+      </div>
+      <div class="field">
+        <label>第3希望<span class="req">必須</span></label>
+        <div class="dt-row"><input type="date" id="f-d3"><input type="time" id="f-t3" step="900"></div>
+      </div>
+      <div class="err" id="form-err"></div>
+      <button class="pill" id="btn-submit" onclick="submitRedate()">この内容で送信する</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="scr-done">
+  <div class="done-wrap">
+    <div class="done-mark">✓</div>
+    <h2>候補日時を受け付けました</h2>
+    <p>担当者が確認し、面接日時を確定して<br>このLINEにご連絡します。</p>
+    <button class="pill" onclick="liffClose()" style="max-width:280px;margin:24px auto 0">閉じる</button>
+  </div>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div><p>送信しています…</p></div>
+
+<script>
+"use strict";
+let liffReady = false;
+const $ = (id) => document.getElementById(id);
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  $(id).classList.add("active");
+  window.scrollTo(0, 0);
+}
+function liffClose() { if (liffReady && liff.closeWindow) liff.closeWindow(); }
+
+async function boot() {
+  try {
+    await liff.init({ liffId: window.CONFIG.LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    liffReady = true;
+  } catch (e) {
+    console.warn("liff.init failed", e);
+    $("form-err").textContent = "LINEログインを確認できませんでした。LINEアプリ内から開き直してください。";
+  }
+}
+
+async function submitRedate() {
+  const errs = [];
+  const slots = [];
+  [["f-d1","f-t1","第1希望"],["f-d2","f-t2","第2希望"],["f-d3","f-t3","第3希望"]].forEach(([d,t,lbl]) => {
+    if (!$(d).value || !$(t).value) errs.push(`${lbl}の日付と時刻を入力してください`);
+    else slots.push($(d).value + " " + $(t).value);
+  });
+  if (!liffReady) errs.push("LINEログインを確認できませんでした。開き直してお試しください。");
+  $("form-err").textContent = errs.join("\n");
+  if (errs.length) return;
+
+  $("btn-submit").disabled = true;
+  $("loading").classList.add("show");
+  try {
+    const res = await fetch(window.CONFIG.GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ kind: "redate", idToken: liff.getIDToken(), slots })
+    });
+    const r = await res.json();
+    if (!r.ok) { $("form-err").textContent = r.error || "送信に失敗しました。時間をおいてお試しください。"; return; }
+    show("scr-done");
+  } catch (e) {
+    $("form-err").textContent = "通信エラー: " + (e.message || e);
+  } finally {
+    $("btn-submit").disabled = false;
+    $("loading").classList.remove("show");
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
