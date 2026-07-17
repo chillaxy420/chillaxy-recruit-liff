@@ -146,6 +146,8 @@ async function submitRedate() {
     if (!$(d).value || !$(t).value) errs.push(`${lbl}の日付と時刻を入力してください`);
     else slots.push($(d).value + " " + $(t).value);
   });
+  const dates = ["f-d1","f-d2","f-d3"].map(id => $(id).value).filter(Boolean);
+  if (new Set(dates).size !== dates.length) errs.push("候補日時は3つとも別の日付を選んでください");
   if (!liffReady) errs.push("LINEログインを確認できませんでした。開き直してお試しください。");
   $("form-err").textContent = errs.join("\n");
   if (errs.length) return;
