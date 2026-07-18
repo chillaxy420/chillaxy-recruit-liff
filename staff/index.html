@@ -291,7 +291,7 @@ async function boot(){
   } catch(e){ console.warn("liff.init failed", e); }
   // キャッシュがあれば即ホーム描画（体感即時）。裏で home 1往復で再検証。
   const cache = loadHomeCache();
-  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); }
+  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); applyDeepLink(); }
   let h;
   try { h = await api("home"); }
   catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-code-err").textContent = "通信エラー: "+(e.message||e); } return; }
@@ -304,9 +304,19 @@ async function boot(){
       renderToday(h.today||null);
     } else {
       enterHome(h.today||null);
+      applyDeepLink();
     }
   }
   else { clearHomeCache(); show("scr-bind"); } // 招待コード入力から（氏名一覧はコード検証後にのみ取得）
+}
+
+// ディープリンク: LIFF URL に ?page=wish を付けるとホーム経由で希望提出画面を直接開く
+// (LINEの希望収集プッシュのボタンが使用。連携済みのときだけ発火・1回きり)
+let DEEPLINK_APPLIED = false;
+function applyDeepLink(){
+  if (DEEPLINK_APPLIED) return;
+  DEEPLINK_APPLIED = true;
+  if (new URLSearchParams(location.search).get("page") === "wish") openWish();
 }
 
 // 招待コード検証: コード付き home で候補一覧を取得できたら氏名選択へ進む
