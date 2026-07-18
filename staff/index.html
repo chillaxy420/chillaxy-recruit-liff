@@ -679,7 +679,18 @@ async function fetchCashAir(){
   const fresh = rows.filter(r => !have.has(key(r)));
   if(!fresh.length){ toast("取得した" + rows.length + "件はすべて取込済みです"); return; }
   const skipped = rows.length - fresh.length;
-  if(!confirm("Airレジから" + fresh.length + "件を現金出納帳に追加します。よろしいですか？" + (skipped ? ("\n（既存" + skipped + "件はスキップ）") : ""))) return;
+  // 追加内容をダイアログに明示（多い場合は先頭10件まで表示）
+  const amtOf = r => {
+    const i = String(r.入金 ?? "").trim(), o = String(r.出金 ?? "").trim();
+    const p = [];
+    if (i && i !== "0") p.push("入金 " + i + "円");
+    if (o && o !== "0") p.push("出金 " + o + "円");
+    return p.join(" / ") || "金額なし";
+  };
+  const shown = fresh.slice(0, 10);
+  const lines = shown.map(r => `・${r.日付}　${r.内容}　${amtOf(r)}`).join("\n")
+    + (fresh.length > shown.length ? `\n…ほか${fresh.length - shown.length}件` : "");
+  if(!confirm("Airレジから" + fresh.length + "件を現金出納帳に追加します。\n\n" + lines + "\n\nよろしいですか？" + (skipped ? ("\n（既存" + skipped + "件はスキップ）") : ""))) return;
   loading(true,"追加中…");
   let added = 0;
   try {
