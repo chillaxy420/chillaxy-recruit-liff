@@ -94,6 +94,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--main); color: #fff; padding: 12px 22px; border-radius: 30px; font-size: 14px; z-index: 100; opacity: 0; transition: opacity .3s; pointer-events: none; }
   .toast.show { opacity: 1; }
+  .fc-mode .fc-hide { display: none !important; } /* FC加盟店モード: 日報以外を隠す */
 </style>
 </head>
 <body>
@@ -116,6 +117,14 @@
         <div class="err" id="bind-err"></div>
         <button class="pill primary" id="bind-btn" onclick="doBind()">この名前で始める</button>
       </div>
+      <div id="fc-link" style="margin-top:16px;text-align:center"><a href="#" onclick="showFcBind();return false" style="font-size:12.5px;color:#888">FC加盟店の方はこちら</a></div>
+      <div id="fc-bind-area" style="display:none">
+        <p class="muted">FC加盟店用の連携です。配布された<b>FCコード</b>とお名前を入力してください（日報のみ利用できます）。</p>
+        <div style="margin-top:14px"><input type="text" id="fc-code" placeholder="FCコード（例: FC-XXXX-XXXX）" autocapitalize="characters" autocomplete="one-time-code"></div>
+        <div style="margin-top:10px"><input type="text" id="fc-name" placeholder="お名前（日報の担当者名になります）"></div>
+        <div class="err" id="fc-err"></div>
+        <button class="pill primary" onclick="doFcBind()">連携して日報をはじめる</button>
+      </div>
     </div>
   </div>
 </div>
@@ -124,15 +133,15 @@
 <div class="screen" id="scr-home">
   <header class="app"><div><img class="brandimg" src="../logo.webp" alt="CHILLAXY"><div class="sub" id="home-sub">STAFF</div></div></header>
   <div class="wrap">
-    <div id="today-area"></div>
-    <button class="menu-btn" onclick="openShift()"><span class="ico">📅</span><span>シフトを確認する<small>確定シフト・勤怠を見る</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openWish()"><span class="ico">✍️</span><span>希望シフトを提出する<small>出勤希望・休み希望を登録</small></span><span class="arw">›</span></button>
+    <div id="today-area" class="fc-hide"></div>
+    <button class="menu-btn fc-hide" onclick="openShift()"><span class="ico">📅</span><span>シフトを確認する<small>確定シフト・勤怠を見る</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openWish()"><span class="ico">✍️</span><span>希望シフトを提出する<small>出勤希望・休み希望を登録</small></span><span class="arw">›</span></button>
     <button class="menu-btn" onclick="openNippou()"><span class="ico">📝</span><span>日報<small>この画面で記入・提出（早番→遅番で追記）</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openCash()"><span class="ico">💴</span><span>現金出納帳<small>この画面で明細を追加</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openLink('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openLink('monthly')"><span class="ico">📊</span><span>月次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openLink('mf_expense')"><span class="ico">🚃</span><span>交通費・経費申請<small>MFクラウド経費でログイン</small></span><span class="arw">›</span></button>
-    <button class="menu-btn" onclick="openLink('mf_payroll')"><span class="ico">💰</span><span>給与明細<small>MFクラウド給与でログイン</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openCash()"><span class="ico">💴</span><span>現金出納帳<small>この画面で明細を追加</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openLink('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openLink('monthly')"><span class="ico">📊</span><span>月次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openLink('mf_expense')"><span class="ico">🚃</span><span>交通費・経費申請<small>MFクラウド経費でログイン</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" onclick="openLink('mf_payroll')"><span class="ico">💰</span><span>給与明細<small>MFクラウド給与でログイン</small></span><span class="arw">›</span></button>
   </div>
 </div>
 
@@ -173,7 +182,7 @@
     <div id="np-form" style="display:none">
       <div class="card">
         <div id="np-state" style="font-size:13px"></div>
-        <button class="pill" style="margin-top:10px" onclick="fetchNippouAir()">📥 Airレジから売上を取込</button>
+        <button class="pill" id="np-air-btn" style="margin-top:10px" onclick="fetchNippouAir()">📥 Airレジから売上を取込</button>
         <div class="field"><label>担当者名（早番）</label><input type="text" id="np-t1"></div>
         <div class="field"><label>担当者名（遅番）</label><input type="text" id="np-t2"></div>
         <div class="field"><label>担当者（その他）</label><input type="text" id="np-t3"></div>
@@ -251,10 +260,15 @@ function todayStr(){ const n=new Date(); return `${n.getFullYear()}-${("0"+(n.ge
 function loadHomeCache(){
   try {
     const c = JSON.parse(localStorage.getItem("staff_home")||"null");
-    if(!c || !c.staff) return null;
+    if(!c) return null;
+    if(c.fc) return { fc: c.fc }; // FC加盟店モード
+    if(!c.staff) return null;
     if(c.date !== todayStr()) return { staff:c.staff, today:null }; // 別日: 名前は使うが当日データは破棄
     return c;
   } catch(e){ return null; }
+}
+function saveFcCache(fc){
+  try { localStorage.setItem("staff_home", JSON.stringify({ fc: fc, date: todayStr() })); } catch(e){}
 }
 function saveHomeCache(staff, today){
   try { localStorage.setItem("staff_home", JSON.stringify({ staff, today, date: todayStr() })); } catch(e){}
@@ -291,13 +305,18 @@ async function boot(){
   } catch(e){ console.warn("liff.init failed", e); }
   // キャッシュがあれば即ホーム描画（体感即時）。裏で home 1往復で再検証。
   const cache = loadHomeCache();
-  if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); applyDeepLink(); }
+  if (cache && cache.fc){ FC = cache.fc; enterFcHome(); loading(false); }
+  else if (cache && cache.staff){ ME = cache.staff; enterHome(cache.today); loading(false); applyDeepLink(); }
   let h;
   try { h = await api("home"); }
   catch(e){ loading(false); if(!cache){ show("scr-bind"); $("bind-code-err").textContent = "通信エラー: "+(e.message||e); } return; }
   loading(false);
   if (!h || !h.ok){ if(!cache){ show("scr-bind"); $("bind-code-err").textContent = (h&&h.error)||"エラー"; } return; }
-  if (h.staff){
+  if (h.fc){
+    FC = h.fc; saveFcCache(h.fc);
+    if (!cache) enterFcHome(); // キャッシュ表示済みなら画面遷移しない
+  }
+  else if (h.staff){
     ME = h.staff; saveHomeCache(h.staff, h.today||null);
     if (cache) { // キャッシュで表示済み: 別画面へ移動中でもホームへ戻さず、データのみ更新
       $("home-sub").textContent = "STAFF — " + (ME.name||"");
@@ -376,9 +395,42 @@ function initYM(prefixY, prefixM, baseMonthOffset){
 }
 
 function enterHome(today){
+  $("scr-home").classList.remove("fc-mode");
   $("home-sub").textContent = "STAFF — " + (ME.name||"");
   show("scr-home");
   renderToday(today);
+}
+
+// ---- FC加盟店モード（日報のみ）----
+let FC = null; // {name, store}
+function enterFcHome(){
+  $("scr-home").classList.add("fc-mode");
+  $("home-sub").textContent = "FC — " + (FC.store||"") + "　" + (FC.name||"");
+  show("scr-home");
+}
+function showFcBind(){
+  $("bind-code-area").style.display = "none";
+  $("bind-name-area").style.display = "none";
+  $("fc-link").style.display = "none";
+  $("fc-bind-area").style.display = "";
+}
+async function doFcBind(){
+  const code = $("fc-code").value.trim();
+  const name = $("fc-name").value.trim();
+  const errs = [];
+  if(!code) errs.push("FCコードを入力してください");
+  if(!name) errs.push("お名前を入力してください");
+  $("fc-err").textContent = errs.join("\n");
+  if(errs.length) return;
+  loading(true,"連携中…");
+  try {
+    const r = await api("fcbind", { fcCode: code, name });
+    if(!r.ok){ $("fc-err").textContent = r.error||"連携に失敗しました"; return; }
+    FC = r.fc;
+    saveFcCache(FC);
+    enterFcHome();
+  } catch(e){ $("fc-err").textContent = "通信エラー: "+(e.message||e); }
+  finally { loading(false); }
 }
 function renderToday(t){
   TODAY = t || null;
@@ -519,12 +571,22 @@ function npKpi(){
 }
 function openNippou(){
   show("scr-nippou");
-  fillOptions($("np-store"), window.CONFIG.NIPPOU_STORES, "店舗を選択");
   fillOptions($("np-weather"), window.CONFIG.WEATHER, "—");
-  $("np-store").value = "";
   $("np-form").style.display = "none";
   $("np-hint").style.display = "block";
-  $("np-hint").textContent = "店舗を選び「読込」を押すと、本日の日報を表示します。早番が作成し、遅番が同じ日報に追記して締めます。";
+  $("np-air-btn").style.display = FC ? "none" : "block"; // FC店舗はAirレジ対象外
+  if (FC) { // FC: 店舗はコードで確定済み（選択不可）・自動読込
+    fillOptions($("np-store"), [FC.store]);
+    $("np-store").value = FC.store;
+    $("np-store").disabled = true;
+    $("np-hint").textContent = "本日の日報を読み込んでいます…";
+    loadNippou();
+  } else {
+    $("np-store").disabled = false;
+    fillOptions($("np-store"), window.CONFIG.NIPPOU_STORES, "店舗を選択");
+    $("np-store").value = "";
+    $("np-hint").textContent = "店舗を選び「読込」を押すと、本日の日報を表示します。早番が作成し、遅番が同じ日報に追記して締めます。";
+  }
 }
 async function loadNippou(){
   const store = $("np-store").value;
@@ -535,7 +597,7 @@ async function loadNippou(){
     if(!r.ok){ $("np-hint").textContent = r.error||"取得に失敗しました"; return; }
     NP_STATE = r;
     const v = r.values || {};
-    $("np-t1").value = v["担当者名１"] || (!r.exists ? (ME.name||"") : "");
+    $("np-t1").value = v["担当者名１"] || (!r.exists ? ((ME&&ME.name)||(FC&&FC.name)||"") : "");
     $("np-t2").value = v["担当者名２"] || "";
     $("np-t3").value = v["担当者３"] || "";
     $("np-weather").value = v["天気１"] || "";
