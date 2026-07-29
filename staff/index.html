@@ -137,7 +137,7 @@
     <button class="menu-btn fc-hide" onclick="openShift()"><span class="ico">📅</span><span>シフトを確認する<small>確定シフト・勤怠を見る</small></span><span class="arw">›</span></button>
     <button class="menu-btn fc-hide" onclick="openWish()"><span class="ico">✍️</span><span>希望シフトを提出する<small>出勤希望・休み希望を登録</small></span><span class="arw">›</span></button>
     <button class="menu-btn" onclick="openNippou()"><span class="ico">📝</span><span>日報<small>この画面で記入・提出（早番→遅番で追記）</small></span><span class="arw">›</span></button>
-    <button class="menu-btn fc-hide" onclick="openCash()"><span class="ico">💴</span><span>現金出納帳<small>この画面で明細を追加</small></span><span class="arw">›</span></button>
+    <button class="menu-btn fc-hide" id="menu-cash" onclick="openCash()"><span class="ico">💴</span><span>現金出納帳<small>この画面で明細を追加</small></span><span class="arw">›</span></button>
     <button class="menu-btn fc-hide" onclick="openLink('weekly')"><span class="ico">🗓️</span><span>週次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
     <button class="menu-btn fc-hide" onclick="openLink('monthly')"><span class="ico">📊</span><span>月次レポート<small>kintoneで記入・確認/編集</small></span><span class="arw">›</span></button>
     <button class="menu-btn fc-hide" onclick="openLink('mf_expense')"><span class="ico">🚃</span><span>交通費・経費申請<small>MFクラウド経費でログイン</small></span><span class="arw">›</span></button>
@@ -406,6 +406,7 @@ let FC = null; // {name, store}
 function enterFcHome(){
   $("scr-home").classList.add("fc-mode");
   $("home-sub").textContent = "FC — " + (FC.store||"") + "　" + (FC.name||"");
+  $("menu-cash").classList.toggle("fc-hide", !FC.cash); // コードに現金権限があれば現金出納帳も表示
   show("scr-home");
 }
 function showFcBind(){
@@ -652,15 +653,24 @@ async function saveNippou(){
 // ---- 現金出納帳（LIFF内入力） ----
 function openCash(){
   show("scr-cash");
-  fillOptions($("cash-store"), window.CONFIG.CASH_STORES, "店舗を選択");
   fillOptions($("c-naiyou"), window.CONFIG.CASH_NAIYOU, "選択してください");
-  $("cash-store").value = "";
   $("cash-listcard").style.display = "none";
   $("cash-form").style.display = "none";
   $("cash-hint").style.display = "block";
-  $("cash-hint").textContent = "店舗を選び「読込」を押すと、当月の明細と入力欄を表示します。";
+  if (FC) { // FC: 店舗はコードで確定済み（選択不可）・自動読込
+    fillOptions($("cash-store"), [FC.store]);
+    $("cash-store").value = FC.store;
+    $("cash-store").disabled = true;
+    $("cash-hint").textContent = "当月の明細を読み込んでいます…";
+  } else {
+    $("cash-store").disabled = false;
+    fillOptions($("cash-store"), window.CONFIG.CASH_STORES, "店舗を選択");
+    $("cash-store").value = "";
+    $("cash-hint").textContent = "店舗を選び「読込」を押すと、当月の明細と入力欄を表示します。";
+  }
   const now = new Date();
   $("c-date").value = `${now.getFullYear()}-${("0"+(now.getMonth()+1)).slice(-2)}-${("0"+now.getDate()).slice(-2)}`;
+  if (FC) loadCash();
 }
 async function loadCash(){
   const store = $("cash-store").value;
