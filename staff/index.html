@@ -543,13 +543,21 @@ function onWtype(sel){
 }
 async function submitWish(){
   const entries = [];
+  const badTimes = []; // 開始>=終了 (時刻未変更のデフォルト提出など) は弾く
   document.querySelectorAll(".wish-day").forEach(el=>{
     const wt = el.querySelector(".wtype").value;
     if(!wt) return;
     const e = { date: el.dataset.date, wishType: wt };
-    if(wt==="出勤"){ e.start = el.querySelector(".wstart").value; e.end = el.querySelector(".wend").value; }
+    if(wt==="出勤"){
+      e.start = el.querySelector(".wstart").value; e.end = el.querySelector(".wend").value;
+      const toM = t => { const p = t.split(":"); return (+p[0])*60 + (+p[1]||0); };
+      let s = toM(e.start), en = toM(e.end);
+      if(en <= 60) en += 24*60; // 終了 0:00/0:30/1:00 は深夜またぎ扱い
+      if(en <= s){ const p = el.dataset.date.split("-"); badTimes.push(`${+p[1]}/${+p[2]}`); return; }
+    }
     entries.push(e);
   });
+  if(badTimes.length){ $("wish-err").textContent = "出勤時間が正しくありません。開始より後の終了時刻を選んでください: " + badTimes.join(", "); return; }
   if(!entries.length){ $("wish-err").textContent="希望を1日以上選んでください"; return; }
   loading(true,"提出中…");
   try {
