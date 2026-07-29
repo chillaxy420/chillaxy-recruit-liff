@@ -119,11 +119,10 @@
       </div>
       <div id="fc-link" style="margin-top:16px;text-align:center"><a href="#" onclick="showFcBind();return false" style="font-size:12.5px;color:#888">FC加盟店の方はこちら</a></div>
       <div id="fc-bind-area" style="display:none">
-        <p class="muted">FC加盟店用の連携です。配布された<b>FCコード</b>とお名前を入力してください（日報のみ利用できます）。</p>
+        <p class="muted">FC加盟店用の連携です。配布された<b>FCコード</b>を入力してください。</p>
         <div style="margin-top:14px"><input type="text" id="fc-code" placeholder="FCコード（例: FC-XXXX-XXXX）" autocapitalize="characters" autocomplete="one-time-code"></div>
-        <div style="margin-top:10px"><input type="text" id="fc-name" placeholder="お名前（日報の担当者名になります）"></div>
         <div class="err" id="fc-err"></div>
-        <button class="pill primary" onclick="doFcBind()">連携して日報をはじめる</button>
+        <button class="pill primary" onclick="doFcBind()">連携してはじめる</button>
       </div>
     </div>
   </div>
@@ -405,7 +404,7 @@ function enterHome(today){
 let FC = null; // {name, store}
 function enterFcHome(){
   $("scr-home").classList.add("fc-mode");
-  $("home-sub").textContent = "FC — " + (FC.store||"") + "　" + (FC.name||"");
+  $("home-sub").textContent = "FC — " + (FC.store||"") + (FC.name ? "　" + FC.name : "");
   $("menu-cash").classList.toggle("fc-hide", !FC.cash); // コードに現金権限があれば現金出納帳も表示
   show("scr-home");
 }
@@ -417,15 +416,11 @@ function showFcBind(){
 }
 async function doFcBind(){
   const code = $("fc-code").value.trim();
-  const name = $("fc-name").value.trim();
-  const errs = [];
-  if(!code) errs.push("FCコードを入力してください");
-  if(!name) errs.push("お名前を入力してください");
-  $("fc-err").textContent = errs.join("\n");
-  if(errs.length) return;
+  if(!code){ $("fc-err").textContent = "FCコードを入力してください"; return; }
+  $("fc-err").textContent = "";
   loading(true,"連携中…");
   try {
-    const r = await api("fcbind", { fcCode: code, name });
+    const r = await api("fcbind", { fcCode: code });
     if(!r.ok){ $("fc-err").textContent = r.error||"連携に失敗しました"; return; }
     FC = r.fc;
     saveFcCache(FC);
