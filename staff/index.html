@@ -688,7 +688,7 @@ async function loadCash(){
     $("cash-hint").style.display = "none";
     $("cash-listcard").style.display = "block";
     $("cash-form").style.display = "block";
-    $("c-tantou").value = ME.name || "";
+    $("c-tantou").value = (ME&&ME.name)||(FC&&FC.name)||"";
     $("cash-air-btn").style.display = (window.CONFIG.CASH_AIRREGI_STORES||[]).indexOf(store) >= 0 ? "block" : "none";
   } catch(e){ $("cash-hint").textContent = "通信エラー: "+(e.message||e); }
   finally { loading(false); }
