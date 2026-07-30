@@ -246,7 +246,7 @@
 "use strict";
 let liffReady = false, ME = null, TODAY = null;
 const $ = (id) => document.getElementById(id);
-const TIMES = (() => { const a = []; for (let h = 6; h <= 26; h++) { const hh = (h % 24); a.push(("0"+hh).slice(-2)+":00"); a.push(("0"+hh).slice(-2)+":30"); } return a; })();
+const TIMES = (() => { const a = []; for (let h = 6; h <= 26; h++) { const hh = (h % 24); a.push(hh+":00"); a.push(hh+":30"); } return a; })(); // 先頭ゼロなし (Slack/グリッドの "9:00" 表記と統一。ゼロ付きだと既存時刻がセレクトに反映されない)
 const DOW = ["日","月","火","水","木","金","土"];
 
 function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); $(id).classList.add("active"); window.scrollTo(0,0); }
@@ -511,14 +511,16 @@ async function loadWish(){
     const ex = existing[date];
     const wt = ex ? ex.wishType : "";
     const cls = dow===0?"sun":dow===6?"sat":"";
+    // 固定シフトのスタッフは休み希望のみ提出 (出勤希望は勤務ルールで決まるため選択肢を出さない)
+    const isFixed = (r.working === "固定シフト");
     html += `<div class="wish-day ${cls}" data-date="${date}">
       <span class="d">${day}(${DOW[dow]})</span>
       <select class="wtype" onchange="onWtype(this)">
-        <option value="" ${wt===""?"selected":""}>—</option>
-        <option value="出勤" ${wt==="出勤"?"selected":""}>出勤</option>
+        <option value="" ${(wt===""||(isFixed&&wt==="出勤"))?"selected":""}>—</option>
+        ${isFixed?"":`<option value="出勤" ${wt==="出勤"?"selected":""}>出勤</option>`}
         <option value="休み希望" ${wt==="休み希望"?"selected":""}>休み希望</option>
       </select>
-      <span class="times ${wt==="出勤"?"":"hidden"}">
+      <span class="times ${!isFixed&&wt==="出勤"?"":"hidden"}">
         <select class="wstart">${timeOpts}</select><select class="wend">${timeOpts}</select>
       </span></div>`;
     WISH_DAYS.push(date);
@@ -548,7 +550,7 @@ async function submitWish(){
       e.start = el.querySelector(".wstart").value; e.end = el.querySelector(".wend").value;
       const toM = t => { const p = t.split(":"); return (+p[0])*60 + (+p[1]||0); };
       let s = toM(e.start), en = toM(e.end);
-      if(en <= 60) en += 24*60; // 終了 0:00/0:30/1:00 は深夜またぎ扱い
+      if(en <= 150) en += 24*60; // 終了 0:00〜2:30 は深夜またぎ扱い (TIMESの終端に合わせる)
       if(en <= s){ const p = el.dataset.date.split("-"); badTimes.push(`${+p[1]}/${+p[2]}`); return; }
     }
     entries.push(e);
