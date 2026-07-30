@@ -474,7 +474,9 @@ async function openShift(){
 }
 async function loadShift(){
   $("shift-body").innerHTML = '<p class="muted">読み込み中…</p>';
-  const r = await api("personal", { year: $("shift-year").value, month: $("shift-month").value });
+  let r;
+  try { r = await api("personal", { year: $("shift-year").value, month: $("shift-month").value }); }
+  catch(e){ $("shift-body").innerHTML = `<p class="err">通信エラー: ${esc(e.message||e)}　再度お試しください。</p>`; return; }
   if(!r.ok){ $("shift-body").innerHTML = `<p class="err">${esc(r.error||"取得に失敗しました")}</p>`; return; }
   const rows = r.days.filter(d=>d.shifts.length || d.off);
   if(!rows.length){ $("shift-body").innerHTML = `<p class="muted">${r.month}月の確定シフトはまだありません。</p>`; return; }
@@ -499,7 +501,9 @@ async function openWish(){
 async function loadWish(){
   $("wish-body").innerHTML = '<p class="muted">読み込み中…</p>'; $("wish-err").textContent="";
   const y = parseInt($("wish-year").value,10), m = parseInt($("wish-month").value,10);
-  const r = await api("wishlist", { year: y, month: m });
+  let r;
+  try { r = await api("wishlist", { year: y, month: m }); }
+  catch(e){ $("wish-body").innerHTML = `<p class="err">通信エラー: ${esc(e.message||e)}　再度お試しください。</p>`; return; }
   if(!r.ok){ $("wish-body").innerHTML = `<p class="err">${esc(r.error||"取得に失敗しました")}</p>`; return; }
   const existing = {}; (r.wishes||[]).forEach(w=>existing[w.date]=w);
   const lastDay = new Date(y, m, 0).getDate();
@@ -782,10 +786,11 @@ async function fetchCashAir(){
   let added = 0;
   try {
     for(const row of fresh){
-      const rr = await api("cash_add", { store, row });
+      const rr = await api("cash_add", { store, row, auto: 1 }); // auto=Airレジ取込行(取引先/担当者名の必須を緩和)
       if(rr.ok) added++;
     }
-    toast(added + "件を追加しました");
+    const failed = fresh.length - added;
+    toast(added + "件を追加しました" + (failed ? "（" + failed + "件は追加できませんでした）" : ""));
     await loadCash();
   } catch(e){ $("cash-err").textContent = "追加中にエラー: "+(e.message||e); }
   finally { loading(false); }

@@ -405,11 +405,19 @@ function openForm() {
   $("interview-note").textContent = DATA.common.interviewNote;
   $("f-emp").innerHTML = (j.employmentTypes||["正社員","アルバイト"]).map((t, i) =>
     `<label onclick="pickEmp(this)"><input type="radio" name="emp" value="${esc(t)}">${esc(t)}</label>`).join("");
+  // 契約情報欄をリセット（前の職種で入力した週労働時間/時間帯が別職種の応募に混入しないように）
+  $("f-parttime").style.display = "none";
+  $("f-hours").value = "";
+  $("f-timeslot").value = "";
+  // 候補日時は今日以降のみ選択可
+  const tmin = todayIso();
+  ["f-d1","f-d2","f-d3"].forEach(id => { $(id).min = tmin; });
   $("form-err").textContent = "";
   show("scr-form");
 }
-// アルバイト・業務委託のとき想定週労働時間/時間帯(契約書用)を表示
-const PARTTIME_EMP = ["アルバイト", "業務委託"];
+function todayIso(){ const n=new Date(); return `${n.getFullYear()}-${("0"+(n.getMonth()+1)).slice(-2)}-${("0"+n.getDate()).slice(-2)}`; }
+// アルバイト・業務委託のとき想定週労働時間/時間帯(契約書用)を表示（「委託契約」はjobs.json職種4の表記ゆれ吸収）
+const PARTTIME_EMP = ["アルバイト", "業務委託", "委託契約"];
 function pickEmp(lab) {
   document.querySelectorAll("#f-emp label").forEach(l => l.classList.remove("on"));
   lab.classList.add("on");
@@ -543,9 +551,16 @@ function liffClose() {
 
 // ---------- 起動 ----------
 async function boot() {
-  const res = await fetch("./jobs.json");
-  DATA = await res.json();
-  renderList();
+  try {
+    const res = await fetch("./jobs.json");
+    DATA = await res.json();
+    renderList();
+  } catch (e) { // 求人データ取得失敗時に白画面のままにしない
+    document.body.insertAdjacentHTML("afterbegin",
+      '<div style="padding:24px;text-align:center;color:#cc2055">求人情報の読み込みに失敗しました。通信環境をご確認のうえ、開き直してください。</div>');
+    console.warn("jobs.json load failed", e);
+    return;
+  }
   try {
     await liff.init({ liffId: window.CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) liff.login({ redirectUri: location.href });

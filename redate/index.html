@@ -126,9 +126,18 @@ function show(id) {
   $(id).classList.add("active");
   window.scrollTo(0, 0);
 }
-function liffClose() { if (liffReady && liff.closeWindow) liff.closeWindow(); }
+function liffClose() {
+  if (liffReady && liff.isInClient && liff.isInClient()) { liff.closeWindow(); return; }
+  // LINE外ブラウザではcloseWindowが効かないため案内に切替
+  const p = document.querySelector("#scr-done p");
+  if (p) p.textContent = "送信済みです。このページはブラウザの操作で閉じてください。";
+}
 
 async function boot() {
+  // 候補日時は今日以降のみ選択可
+  const n = new Date();
+  const tmin = `${n.getFullYear()}-${("0"+(n.getMonth()+1)).slice(-2)}-${("0"+n.getDate()).slice(-2)}`;
+  ["f-d1","f-d2","f-d3"].forEach(id => { $(id).min = tmin; });
   try {
     await liff.init({ liffId: window.CONFIG.LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
